@@ -8,6 +8,7 @@
 @Date 2019/9/20
 @Version 1.0
 """
+import json
 import re
 import time
 
@@ -23,6 +24,11 @@ class LoginError(Exception):
 
 class EvernoteSession(object):
     def __init__(self, username, password):
+        """
+        Log in the evernote by the username and password.
+        :param username:
+        :param password:
+        """
         super(EvernoteSession, self).__init__()
         self.headers = {
             'Host': 'app.yinxiang.com',
@@ -49,8 +55,8 @@ class EvernoteSession(object):
         script = soup.findAll('script')[3].string
         hpts = re.search(r'hpts".*= "(.*)";', script).group(1)
         hptsh = re.search(r'hptsh".*= "(.*)";', script).group(1)
-        _sourcePage = soup.find(name='input', attrs={'name': '_sourcePage'}).get('value')
-        __fp = soup.find(name='input', attrs={'name': '__fp'}).get('value')
+        _sourcePage = soup.find(name='input', attrs={'name': '_sourcePage'}).find_next('value')
+        __fp = soup.find(name='input', attrs={'name': '__fp'}).find_next('value')
 
         form_data = {
             'username': self.__username,
@@ -72,8 +78,8 @@ class EvernoteSession(object):
 
     def create_token(self):
         """
-        新生成token
-        :return:
+        Create a new developer token.
+        :return: token, note_store_url, expired time
         """
         token_headers = dict(self.headers, Referer='https://app.yinxiang.com/api/DeveloperToken.action')
         token_page = self.session.get(self.token_url, headers=token_headers).text
@@ -82,10 +88,10 @@ class EvernoteSession(object):
         is_expired = True if re.search(r'Your Developer Token has already been created', p) is None else False
 
         # data
-        secret = soup.find(name='input', attrs={'name': 'secret'}).get('value')
-        csrfBusterToken = soup.find(name='input', attrs={'name': 'csrfBusterToken'}).get('value')
-        _sourcePage = soup.find(name='input', attrs={'name': '_sourcePage'}).get('value')
-        __fp = soup.find(name='input', attrs={'name': '__fp'}).get('value')
+        secret = soup.find(name='input', attrs={'name': 'secret'}).find_next('value')
+        csrfBusterToken = soup.find(name='input', attrs={'name': 'csrfBusterToken'}).find_next('value')
+        _sourcePage = soup.find(name='input', attrs={'name': '_sourcePage'}).find_next('value')
+        __fp = soup.find(name='input', attrs={'name': '__fp'}).find_next('value')
         form_data = {
             'secret': secret,
             'csrfBusterToken': csrfBusterToken,
@@ -132,3 +138,14 @@ class YinXiangClient(object):
 
     def get_note_store(self):
         return self.get_client().get_note_store()
+
+
+def key_task():
+    with open('setting.json', 'r') as f:
+        settings = json.load(f.read())
+        session = EvernoteSession(settings['user'], settings['password'])
+        token, store_url, expired_time = session.create_token()
+
+
+if __name__ == '__main__':
+    print ''
